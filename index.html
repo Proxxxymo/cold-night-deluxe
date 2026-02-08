@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cold Night Deluxe — Слот-игра</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>❄️</text></svg>">
+    <style>
+        /* =============================================
+           RESET & BASE STYLES
+           ============================================= */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0e27;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        /* =============================================
+           BACKGROUND CANVAS (Snow Particles)
+           ============================================= */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Northern Lights gradient overlay */
+        #aurora {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 40%;
+            background: linear-gradient(
+                180deg,
+                rgba(0,255,150,0.08) 0%,
+                rgba(0,180,255,0.06) 30%,
+                rgba(100,0,255,0.04) 60%,
+                transparent 100%
+            );
+            animation: auroraShift 8s ease-in-out infinite alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes auroraShift {
+            0% { opacity: 0.6; transform: translateX(-5%); }
+            50% { opacity: 1; transform: translateX(5%); }
+            100% { opacity: 0.7; transform: translateX(-3%); }
+        }
+
+        /* =============================================
+           GAME CONTAINER
+           ============================================= */
+        #game {
+            position: relative;
+            z-index: 1;
+            width: 980px;
+            max-width: 98vw;
+            background: linear-gradient(180deg, #0d1340 0%, #0a1035 40%, #0d1848 100%);
+            border-radius: 20px;
+            border: 2px solid rgba(100, 180, 255, 0.3);
+            box-shadow:
+                0 0 60px rgba(0, 100, 255, 0.15),
+                0 0 120px rgba(0, 50, 150, 0.1),
+                inset 0 0 30px rgba(0, 50, 150, 0.1);
+            padding: 15px 20px 20px;
+        }
+
+        /* =============================================
+           TOP BAR — Logo & Info
+           ============================================= */
+        #topBar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 15px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, rgba(0,40,80,0.5), rgba(0,20,60,0.3));
+            border-radius: 12px;
+            border: 1px solid rgba(100, 180, 255, 0.15);
+        }
+
+        #logo {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            background: linear-gradient(180deg, #b0e0ff 0%, #4da6ff 50%, #80c8ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
+            filter: drop-shadow(0 0 10px rgba(100, 180, 255, 0.5));
+        }
+
+        .info-item {
+            text-align: center;
+            padding: 0 12px;
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: rgba(150, 200, 255, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e0f0ff;
+        }
+
+        #winValue {
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+
+        /* =============================================
+           FREE SPINS BAR
+           ============================================= */
+        #freeSpinsBar {
+            display: none;
+            text-align: center;
+            padding: 8px;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #1a0a40, #2a1060, #1a0a40);
+            border-radius: 10px;
+            border: 2px solid #9933ff;
+            font-size: 18px;
+            font-weight: 700;
+            color: #cc88ff;
+            letter-spacing: 2px;
+            animation: fsPulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes fsPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(153, 51, 255, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(153, 51, 255, 0.6); }
+        }
+
+        /* =============================================
+           SLOT AREA — Reels + Payline Numbers
+           ============================================= */
+        #slotArea {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .payline-col {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            gap: 1px;
+            width: 28px;
+            height: 420px;
+        }
+
+        .payline-num {
+            width: 26px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: 700;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .payline-num:hover {
+            transform: scale(1.2);
+        }
+
+        /* =============================================
+           REELS FRAME & GRID
+           ============================================= */
+        #reelsFrame {
+            position: relative;
+            background: linear-gradient(180deg, #060a20 0%, #0a0e30 100%);
+            border-radius: 12px;
+            border: 2px solid rgba(80, 150, 255, 0.25);
+            padding: 6px;
+            box-shadow:
+                inset 0 0 40px rgba(0, 20, 80, 0.5),
+                0 0 20px rgba(0, 80, 200, 0.1);
+        }
+
+        #reelsGrid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px;
+            width: 820px;
+            height: 420px;
+        }
+
+        /* =============================================
+           SYMBOL CELLS
+           ============================================= */
+        .cell {
+            position: relative;
+            background: linear-gradient(180deg, #0e1545 0%, #0a1035 100%);
+            border-radius: 8px;
+            border: 1px solid rgba(80, 140, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .cell.spinning .symbol-content {
+            filter: blur(2px) brightness(1.2);
+            opacity: 0.7;
+            transition: none;
+        }
+
+        .cell.bounce .symbol-content {
+            animation: cellBounce 0.3s ease-out;
+        }
+
+        @keyframes cellBounce {
+            0% { transform: translateY(-15px); }
+            50% { transform: translateY(5px); }
+            75% { transform: translateY(-2px); }
+            100% { transform: translateY(0); }
+        }
+
+        .symbol-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.2s;
+        }
+
+        .symbol-icon {
+            font-size: 52px;
+            line-height: 1;
+        }
+
+        .symbol-label {
+            font-size: 10px;
+            font-weight: 600;
+            margin-top: 2px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        /* Card symbols (text-based) */
+        .sym-10 .symbol-icon, .sym-J .symbol-icon,
+        .sym-Q .symbol-icon, .sym-K .symbol-icon,
+        .sym-A .symbol-icon {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+        }
+
+        .sym-10 .symbol-icon {
+            background: linear-gradient(180deg, #5bb8f5, #2a7fd4);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sym-J .symbol-icon {
+            background: linear-gradient(180deg, #6bc5f7, #3388dd);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sym-Q .symbol-icon {
+            background: linear-gradient(180deg, #b088ee, #7744cc);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sym-K .symbol-icon {
+            background: linear-gradient(180deg, #4da8f0, #2266bb);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .sym-A .symbol-icon {
+            background: linear-gradient(180deg, #88ddff, #44aaee);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+
+        /* Scatter glow */
+        .sym-scatter .symbol-icon {
+            filter: drop-shadow(0 0 12px rgba(0, 220, 255, 0.8));
+            animation: scatterGlow 2s ease-in-out infinite;
+        }
+        @keyframes scatterGlow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 220, 255, 0.6)); }
+            50% { filter: drop-shadow(0 0 20px rgba(0, 220, 255, 1)); }
+        }
+
+        /* Wild glow */
+        .sym-wild .symbol-icon {
+            filter: drop-shadow(0 0 10px rgba(200, 100, 255, 0.7));
+            animation: wildGlow 2s ease-in-out infinite;
+        }
+        @keyframes wildGlow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(200, 100, 255, 0.5)); }
+            50% { filter: drop-shadow(0 0 18px rgba(255, 100, 255, 1)); }
+        }
+
+        /* Win highlight on cell */
+        .cell.win-highlight {
+            border-color: #ffd700 !important;
+            box-shadow: inset 0 0 20px rgba(255, 215, 0, 0.3), 0 0 15px rgba(255, 215, 0, 0.4);
+            animation: winCellPulse 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes winCellPulse {
+            0% { box-shadow: inset 0 0 15px rgba(255,215,0,0.2), 0 0 10px rgba(255,215,0,0.3); }
+            100% { box-shadow: inset 0 0 30px rgba(255,215,0,0.4), 0 0 25px rgba(255,215,0,0.5); }
+        }
+
+        /* =============================================
+           FROZEN SCATTER OVERLAY
+           ============================================= */
+        .freeze-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(ellipse at center,
+                rgba(100, 200, 255, 0.15) 0%,
+                rgba(50, 150, 255, 0.25) 50%,
+                rgba(30, 100, 220, 0.35) 100%
+            );
+            border: 2px solid rgba(100, 200, 255, 0.6);
+            border-radius: 8px;
+            z-index: 5;
+            pointer-events: none;
+            display: none;
+        }
+
+        .freeze-overlay.active {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 4px 6px;
+            animation: freezeIn 0.4s ease-out;
+        }
+
+        @keyframes freezeIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            60% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .freeze-counter {
+            background: rgba(0, 50, 120, 0.8);
+            border: 1px solid rgba(100, 200, 255, 0.7);
+            border-radius: 6px;
+            padding: 2px 6px;
+            font-size: 14px;
+            font-weight: 700;
+            color: #88ddff;
+            z-index: 6;
+        }
+
+        /* Ice crack levels */
+        .freeze-overlay.crack-1 {
+            background: radial-gradient(ellipse at center,
+                rgba(100, 200, 255, 0.12) 0%,
+                rgba(50, 150, 255, 0.2) 50%,
+                rgba(30, 100, 220, 0.3) 100%
+            );
+        }
+
+        .freeze-overlay.crack-2 {
+            background: radial-gradient(ellipse at center,
+                rgba(100, 200, 255, 0.08) 0%,
+                rgba(50, 150, 255, 0.15) 50%,
+                rgba(30, 100, 220, 0.2) 100%
+            );
+            border-style: dashed;
+        }
+
+        /* Ice crack lines (pseudo-elements) */
+        .freeze-overlay.crack-1::after {
+            content: '';
+            position: absolute;
+            top: 20%; left: 10%;
+            width: 80%; height: 60%;
+            border-top: 1px solid rgba(180, 220, 255, 0.3);
+            transform: rotate(-15deg);
+        }
+
+        .freeze-overlay.crack-2::after {
+            content: '';
+            position: absolute;
+            top: 15%; left: 5%;
+            width: 90%; height: 70%;
+            border-top: 1px solid rgba(180, 220, 255, 0.4);
+            border-right: 1px solid rgba(180, 220, 255, 0.3);
+            transform: rotate(-10deg);
+        }
+
+        .freeze-overlay.crack-2::before {
+            content: '';
+            position: absolute;
+            top: 40%; left: 20%;
+            width: 60%; height: 40%;
+            border-bottom: 1px solid rgba(180, 220, 255, 0.35);
+            transform: rotate(20deg);
+        }
+
+        /* Shatter animation */
+        @keyframes iceShatter {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); border-color: #fff; }
+            100% { opacity: 0; transform: scale(1.3); }
+        }
+
+        .freeze-overlay.shattering {
+            animation: iceShatter 0.5s ease-out forwards;
+        }
+
+        /* =============================================
+           WIN LINES SVG OVERLAY
+           ============================================= */
+        #winLinesOverlay {
+            position: absolute;
+            top: 6px; left: 6px;
+            width: 820px;
+            height: 420px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #winLinesOverlay line {
+            stroke-width: 3;
+            stroke-linecap: round;
+            opacity: 0.8;
+        }
+
+        /* =============================================
+           BOTTOM CONTROLS
+           ============================================= */
+        #bottomBar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 10px 15px;
+            background: linear-gradient(90deg, rgba(0,30,60,0.4), rgba(0,20,50,0.3));
+            border-radius: 12px;
+            border: 1px solid rgba(100, 180, 255, 0.12);
+        }
+
+        /* Watermark in bottom area below controls */
+        #gameWatermark {
+            text-align: center;
+            padding: 14px 0 4px;
+            font-size: 11px;
+            color: rgba(150, 180, 220, 0.5);
+            letter-spacing: 0.5px;
+            font-style: italic;
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-family: inherit;
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:active { transform: scale(0.95); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .btn-bet {
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            background: linear-gradient(180deg, #1a3050, #0d1a30);
+            color: #88bbdd;
+            border: 2px solid rgba(100, 180, 255, 0.3);
+        }
+        .btn-bet:hover:not(:disabled) {
+            background: linear-gradient(180deg, #1e3a5e, #122440);
+            border-color: rgba(100, 180, 255, 0.5);
+        }
+
+        #btnSpin {
+            width: 120px;
+            height: 64px;
+            font-size: 20px;
+            background: linear-gradient(180deg, #1a8844, #0e5c2c);
+            color: #aaffcc;
+            border: 2px solid rgba(100, 255, 150, 0.4);
+            box-shadow: 0 0 20px rgba(0, 200, 100, 0.2);
+        }
+        #btnSpin:hover:not(:disabled) {
+            background: linear-gradient(180deg, #1fa050, #128838);
+            box-shadow: 0 0 30px rgba(0, 200, 100, 0.35);
+        }
+        #btnSpin:disabled {
+            background: linear-gradient(180deg, #333, #222);
+            color: #666;
+            border-color: rgba(100,100,100,0.3);
+            box-shadow: none;
+        }
+
+        .btn-info {
+            width: 44px;
+            height: 44px;
+            font-size: 18px;
+            background: linear-gradient(180deg, #2a2050, #1a1040);
+            color: #aa88dd;
+            border: 2px solid rgba(150, 100, 255, 0.3);
+            border-radius: 50%;
+        }
+        .btn-info:hover { border-color: rgba(150, 100, 255, 0.5); }
+
+        .btn-auto {
+            width: 70px;
+            height: 44px;
+            font-size: 12px;
+            background: linear-gradient(180deg, #2a2050, #1a1040);
+            color: #aa88dd;
+            border: 2px solid rgba(150, 100, 255, 0.3);
+        }
+        .btn-auto:hover:not(:disabled) { border-color: rgba(150, 100, 255, 0.5); }
+        .btn-auto.active {
+            background: linear-gradient(180deg, #4a2080, #301060);
+            border-color: #9933ff;
+            color: #cc88ff;
+        }
+
+        .bet-display-inline {
+            text-align: center;
+            min-width: 80px;
+        }
+        .bet-display-inline .info-label { font-size: 9px; }
+        .bet-display-inline .info-value { font-size: 16px; }
+
+        /* =============================================
+           MESSAGE BAR (bottom win / info text)
+           ============================================= */
+        #messageBar {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffd700;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            z-index: 20;
+            display: none;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        /* =============================================
+           MODAL — COMMON STYLES
+           ============================================= */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: linear-gradient(180deg, #121840, #0a0e2a);
+            border: 2px solid rgba(100, 180, 255, 0.4);
+            border-radius: 16px;
+            padding: 30px 40px;
+            text-align: center;
+            box-shadow: 0 0 60px rgba(0, 100, 255, 0.3);
+            max-width: 90vw;
+            animation: modalIn 0.3s ease-out;
+        }
+
+        @keyframes modalIn {
+            0% { opacity: 0; transform: scale(0.8); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .modal-text {
+            font-size: 14px;
+            color: rgba(200, 220, 255, 0.8);
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn-modal {
+            padding: 12px 35px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.15s;
+        }
+
+        .btn-yes {
+            background: linear-gradient(180deg, #22aa55, #117733);
+            color: #ccffdd;
+            border: 2px solid rgba(100, 255, 150, 0.4);
+        }
+        .btn-yes:hover { background: linear-gradient(180deg, #28cc66, #149940); }
+
+        .btn-no {
+            background: linear-gradient(180deg, #cc3344, #882233);
+            color: #ffccdd;
+            border: 2px solid rgba(255, 100, 100, 0.4);
+        }
+        .btn-no:hover { background: linear-gradient(180deg, #dd4455, #993344); }
+
+        .btn-close-modal {
+            padding: 10px 30px;
+            font-size: 14px;
+            font-weight: 700;
+            background: linear-gradient(180deg, #2a3560, #1a2040);
+            color: #aabbdd;
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .btn-close-modal:hover { border-color: rgba(100, 150, 255, 0.5); }
+
+        /* =============================================
+           FREEZE MODAL — specific
+           ============================================= */
+        #freezeModal .modal-title {
+            color: #88ddff;
+        }
+
+        #freezeModal .modal-box {
+            border-color: rgba(0, 200, 255, 0.5);
+        }
+
+        /* =============================================
+           FREE SPINS INTRO MODAL
+           ============================================= */
+        #fsIntroModal .modal-title {
+            font-size: 36px;
+            color: #cc88ff;
+            text-shadow: 0 0 30px rgba(200, 100, 255, 0.6);
+            animation: fsTextPulse 1s ease-in-out infinite alternate;
+        }
+
+        @keyframes fsTextPulse {
+            0% { text-shadow: 0 0 20px rgba(200, 100, 255, 0.4); }
+            100% { text-shadow: 0 0 50px rgba(200, 100, 255, 0.9); }
+        }
+
+        /* =============================================
+           BIG WIN OVERLAY
+           ============================================= */
+        #bigWinOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        #bigWinOverlay.active {
+            display: flex;
+        }
+
+        #bigWinText {
+            font-size: 60px;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow:
+                0 0 20px rgba(255, 215, 0, 0.6),
+                0 0 40px rgba(255, 180, 0, 0.4),
+                0 2px 4px rgba(0,0,0,0.5);
+            animation: bigWinPop 0.5s ease-out;
+            letter-spacing: 3px;
+        }
+
+        #bigWinAmount {
+            font-size: 42px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+            margin-top: 10px;
+            animation: bigWinPop 0.5s ease-out 0.2s both;
+        }
+
+        @keyframes bigWinPop {
+            0% { opacity: 0; transform: scale(0.3); }
+            60% { transform: scale(1.15); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* =============================================
+           PAYTABLE MODAL
+           ============================================= */
+        #paytableModal .modal-box {
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 20px 30px;
+        }
+
+        .paytable-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .paytable-item {
+            background: rgba(20, 30, 60, 0.6);
+            border: 1px solid rgba(80, 140, 255, 0.2);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .paytable-item .pt-icon {
+            font-size: 36px;
+            margin-bottom: 4px;
+        }
+
+        .paytable-item .pt-name {
+            font-size: 11px;
+            color: rgba(180, 210, 255, 0.7);
+            margin-bottom: 4px;
+        }
+
+        .paytable-item .pt-pays {
+            font-size: 11px;
+            color: #88bbdd;
+            line-height: 1.5;
+        }
+
+        .paytable-section {
+            font-size: 14px;
+            font-weight: 700;
+            color: #88ddff;
+            margin: 15px 0 8px;
+            letter-spacing: 1px;
+        }
+
+        .paytable-text {
+            font-size: 12px;
+            color: rgba(180, 210, 255, 0.7);
+            line-height: 1.6;
+            text-align: left;
+            margin: 8px 0;
+        }
+
+        /* =============================================
+           TOOLTIP
+           ============================================= */
+        #tooltip {
+            position: fixed;
+            background: rgba(0, 20, 50, 0.95);
+            color: #88bbdd;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid rgba(100, 180, 255, 0.3);
+            z-index: 200;
+            display: none;
+            pointer-events: none;
+        }
+
+
+        /* =============================================
+           RESPONSIVE
+           ============================================= */
+        @media (max-width: 1020px) {
+            #game { transform: scale(0.85); transform-origin: center; }
+        }
+        @media (max-width: 860px) {
+            #game { transform: scale(0.7); transform-origin: center; }
+        }
+        @media (max-width: 700px) {
+            #game { transform: scale(0.55); transform-origin: center; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Effects -->
+    <canvas id="bgCanvas"></canvas>
+    <div id="aurora"></div>
+
+    <!-- Main Game Container -->
+    <div id="game">
+
+        <!-- Top Bar: Logo + Info -->
+        <div id="topBar">
+            <div id="logo">COLD NIGHT DELUXE</div>
+            <div class="info-item">
+                <div class="info-label">Баланс</div>
+                <div class="info-value" id="balanceValue">1 000,00 ₽</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Ставка</div>
+                <div class="info-value" id="betValue">1,00 ₽</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Выигрыш</div>
+                <div class="info-value" id="winValue">0,00 ₽</div>
+            </div>
+        </div>
+
+        <!-- Free Spins Bar (hidden until active) -->
+        <div id="freeSpinsBar">ФРИСПИНЫ: <span id="fsCount">10</span></div>
+
+        <!-- Slot Area: Payline Numbers + Reels -->
+        <div id="slotArea">
+            <div class="payline-col" id="paylineLeft"></div>
+            <div id="reelsFrame">
+                <div id="reelsGrid">
+                    <!-- 15 cells (5 reels x 3 rows), generated by JS -->
+                </div>
+                <svg id="winLinesOverlay" xmlns="http://www.w3.org/2000/svg"></svg>
+            </div>
+            <div class="payline-col" id="paylineRight"></div>
+        </div>
+
+        <!-- Bottom Controls -->
+        <div id="bottomBar">
+            <button class="btn btn-bet" id="btnMinus" title="Уменьшить ставку">−</button>
+            <div class="bet-display-inline">
+                <div class="info-label">СТАВКА</div>
+                <div class="info-value" id="betInline">1,00 ₽</div>
+            </div>
+            <button class="btn" id="btnSpin">КРУТИТЬ</button>
+            <div class="bet-display-inline">
+                <div class="info-label">ЛИНИИ</div>
+                <div class="info-value">20</div>
+            </div>
+            <button class="btn btn-bet" id="btnPlus" title="Увеличить ставку">+</button>
+            <button class="btn btn-auto" id="btnAuto">АВТО</button>
+            <button class="btn btn-info" id="btnPaytable" title="Таблица выплат">i</button>
+        </div>
+
+        <!-- Watermark in bottom area -->
+        <div id="gameWatermark">Demo created by @holy_tm</div>
+
+        <!-- Message Bar -->
+        <div id="messageBar"></div>
+    </div>
+
+    <!-- Freeze Scatter Modal -->
+    <div class="modal-overlay" id="freezeModal">
+        <div class="modal-box">
+            <div class="modal-title">❄️ Заморозить скаттер? ❄️</div>
+            <div class="modal-text" id="freezeCostText">
+                Оставьте снежинку на барабанах!<br>
+                Стоимость: <strong id="freezeCost">0,20 ₽</strong> (+20% от текущей ставки)
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-yes" id="btnFreezeYes">ДА</button>
+                <button class="btn-modal btn-no" id="btnFreezeNo">НЕТ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Free Spins Intro Modal -->
+    <div class="modal-overlay" id="fsIntroModal">
+        <div class="modal-box">
+            <div class="modal-title">✨ ФРИСПИНЫ! ✨</div>
+            <div class="modal-text" id="fsIntroText">
+                Вы получили <strong>10 фриспинов!</strong><br>
+                Все выигрыши за наш счёт!
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-yes" id="btnFsStart">ПОЕХАЛИ!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Free Spins End Modal -->
+    <div class="modal-overlay" id="fsEndModal">
+        <div class="modal-box">
+            <div class="modal-title">🎉 ФРИСПИНЫ ЗАВЕРШЕНЫ 🎉</div>
+            <div class="modal-text" id="fsEndText">
+                Всего выиграно: <strong id="fsTotalWin">0,00 ₽</strong>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-yes" id="btnFsEnd">ПРОДОЛЖИТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paytable Modal -->
+    <div class="modal-overlay" id="paytableModal">
+        <div class="modal-box">
+            <div class="modal-title">📋 ТАБЛИЦА ВЫПЛАТ</div>
+            <div id="paytableContent"></div>
+            <div class="modal-buttons" style="margin-top:15px;">
+                <button class="btn-close-modal" id="btnClosePaytable">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Big Win Overlay -->
+    <div id="bigWinOverlay">
+        <div id="bigWinText">КРУПНЫЙ ВЫИГРЫШ!</div>
+        <div id="bigWinAmount">0,00 ₽</div>
+    </div>
+
+    <!-- Tooltip -->
+    <div id="tooltip"></div>
+
+    <script>
+    // ==================================================================
+    // SECTION 1: CONFIGURATION
+    // ==================================================================
+
+    // Symbol definitions with display properties
+    // RTP Note: Scatter appears ~3% per position (~1 in 32).
+    // With 15 visible positions, avg ~0.47 scatters per spin.
+    // P(3+ scatters) ≈ 1.2%, triggering 10 FS averaging 25-40x bet.
+    // Freeze cost (20%) gives ~1.5x higher chance of bonus trigger.
+    // Base game average return ≈ 0.92x. Total estimated RTP ≈ 96%.
+    var SYMBOLS = {
+        scatter: { name: 'Снежинка', icon: '❄️', type: 'scatter' },
+        wild:    { name: 'Ледяной кристалл', icon: '💎', type: 'wild' },
+        penguin: { name: 'Пингвин', icon: '🐧', type: 'high' },
+        walrus:  { name: 'Морж', icon: '🦭', type: 'high' },
+        eskimo:  { name: 'Эскимос', icon: '🧔', type: 'high' },
+        igloo:   { name: 'Иглу', icon: '🏔️', type: 'high' },
+        A:       { name: 'Туз', icon: 'A', type: 'low' },
+        K:       { name: 'Король', icon: 'K', type: 'low' },
+        Q:       { name: 'Дама', icon: 'Q', type: 'low' },
+        J:       { name: 'Валет', icon: 'J', type: 'low' },
+        '10':    { name: 'Десятка', icon: '10', type: 'low' }
+    };
+
+    // Paytable: multipliers for bet-per-line for 3, 4, 5 of a kind
+    var PAYTABLE = {
+        wild:    [0, 0, 30, 100, 500],
+        penguin: [0, 0, 25, 100, 500],
+        walrus:  [0, 0, 20,  75, 300],
+        eskimo:  [0, 0, 15,  50, 200],
+        igloo:   [0, 0, 10,  40, 150],
+        A:       [0, 0,  5,  25, 100],
+        K:       [0, 0,  5,  20,  80],
+        Q:       [0, 0,  4,  15,  60],
+        J:       [0, 0,  3,  10,  40],
+        '10':    [0, 0,  2,   8,  30]
+    };
+
+    // 20 Payline definitions: each line = [row for reel0, row for reel1, ... row for reel4]
+    // Rows: 0=top, 1=middle, 2=bottom
+    var PAYLINES = [
+        [1,1,1,1,1],  // 1: middle straight
+        [0,0,0,0,0],  // 2: top straight
+        [2,2,2,2,2],  // 3: bottom straight
+        [0,1,2,1,0],  // 4: V shape
+        [2,1,0,1,2],  // 5: inverted V
+        [1,1,0,0,1],  // 6
+        [1,1,2,2,1],  // 7
+        [0,0,1,2,2],  // 8: descending
+        [2,2,1,0,0],  // 9: ascending
+        [1,0,0,0,1],  // 10
+        [1,2,2,2,1],  // 11
+        [0,1,1,1,0],  // 12
+        [2,1,1,1,2],  // 13
+        [0,1,0,1,0],  // 14: zigzag top
+        [2,1,2,1,2],  // 15: zigzag bottom
+        [1,0,1,0,1],  // 16
+        [1,2,1,2,1],  // 17
+        [0,0,2,0,0],  // 18
+        [2,2,0,2,2],  // 19
+        [0,2,2,2,0]   // 20
+    ];
+
+    // Reel strips — each reel has ~32 symbols determining probability
+    // Scatter ~3.1%, Wild ~3.1%, High symbols ~6-9%, Low symbols ~9-15%
+    var REEL_STRIPS = [
+        // Reel 0
+        ['10','K','penguin','Q','J','A','walrus','10','Q','eskimo','J','K',
+         'igloo','A','10','scatter','Q','J','penguin','K','A','igloo','10',
+         'Q','J','eskimo','walrus','A','K','wild','igloo','J'],
+        // Reel 1
+        ['J','penguin','K','10','A','igloo','Q','walrus','J','10','K',
+         'eskimo','A','Q','scatter','10','J','K','igloo','A','penguin',
+         'Q','10','walrus','J','K','A','wild','Q','10','eskimo','igloo'],
+        // Reel 2
+        ['A','walrus','Q','J','penguin','10','K','igloo','eskimo','A','Q',
+         'J','10','K','scatter','walrus','A','penguin','Q','J','igloo',
+         '10','K','A','eskimo','Q','J','wild','10','penguin','K','igloo'],
+        // Reel 3
+        ['K','eskimo','A','Q','10','walrus','J','igloo','penguin','K','A',
+         'Q','scatter','10','J','eskimo','K','igloo','A','Q','penguin',
+         '10','walrus','J','K','A','wild','igloo','Q','10','J','eskimo'],
+        // Reel 4
+        ['Q','igloo','J','penguin','K','10','A','eskimo','walrus','Q','J',
+         'scatter','K','10','igloo','A','penguin','Q','J','10','walrus',
+         'K','eskimo','A','igloo','Q','J','wild','10','K','A','penguin']
+    ];
+
+    // Bet levels
+    var BET_LEVELS = [0.20, 0.40, 0.60, 0.80, 1.00, 2.00, 5.00, 10.00, 20.00, 50.00, 100.00];
+    var NUM_LINES = 20;
+    var NUM_REELS = 5;
+    var NUM_ROWS = 3;
+
+    // Payline colors for visual display
+    var LINE_COLORS = [
+        '#ff4444','#ff8800','#ffcc00','#88ff00','#00ff88',
+        '#00ddff','#0088ff','#4444ff','#8800ff','#ff00ff',
+        '#ff6688','#ffaa44','#dddd00','#66dd44','#44ddaa',
+        '#44aaff','#6666ff','#aa44ff','#ff44aa','#ff8888'
+    ];
+
+    // ==================================================================
+    // SECTION 2: GAME STATE
+    // ==================================================================
+
+    var state = {
+        balance: 1000.00,
+        betIndex: 4,            // index into BET_LEVELS, default $1.00
+        lastWin: 0,
+        spinning: false,
+        grid: [],               // grid[reel][row] = symbol id string
+        frozenScatters: [],     // [{reel, row, timer, maxTimer}]
+        freeSpinsLeft: 0,
+        inFreeSpins: false,
+        freeSpinsWinTotal: 0,
+        autoPlay: false,
+        winLines: [],           // [{lineIndex, symbol, count, payout}]
+        pendingFreezeOffers: [], // [{reel, row}] scatters waiting for freeze decision
+        freezeCallback: null,   // callback after freeze decisions are done
+        processing: false       // true while evaluating wins / gravity / offers
+    };
+
+    // ==================================================================
+    // SECTION 3: DOM REFERENCES
+    // ==================================================================
+
+    var dom = {};
+
+    function cacheDom() {
+        dom.bgCanvas = document.getElementById('bgCanvas');
+        dom.bgCtx = dom.bgCanvas.getContext('2d');
+        dom.balanceValue = document.getElementById('balanceValue');
+        dom.betValue = document.getElementById('betValue');
+        dom.winValue = document.getElementById('winValue');
+        dom.betInline = document.getElementById('betInline');
+        dom.freeSpinsBar = document.getElementById('freeSpinsBar');
+        dom.fsCount = document.getElementById('fsCount');
+        dom.reelsGrid = document.getElementById('reelsGrid');
+        dom.winLinesOverlay = document.getElementById('winLinesOverlay');
+        dom.messageBar = document.getElementById('messageBar');
+        dom.btnSpin = document.getElementById('btnSpin');
+        dom.btnMinus = document.getElementById('btnMinus');
+        dom.btnPlus = document.getElementById('btnPlus');
+        dom.btnAuto = document.getElementById('btnAuto');
+        dom.btnPaytable = document.getElementById('btnPaytable');
+        dom.freezeModal = document.getElementById('freezeModal');
+        dom.freezeCost = document.getElementById('freezeCost');
+        dom.btnFreezeYes = document.getElementById('btnFreezeYes');
+        dom.btnFreezeNo = document.getElementById('btnFreezeNo');
+        dom.fsIntroModal = document.getElementById('fsIntroModal');
+        dom.fsIntroText = document.getElementById('fsIntroText');
+        dom.btnFsStart = document.getElementById('btnFsStart');
+        dom.fsEndModal = document.getElementById('fsEndModal');
+        dom.fsTotalWin = document.getElementById('fsTotalWin');
+        dom.btnFsEnd = document.getElementById('btnFsEnd');
+        dom.paytableModal = document.getElementById('paytableModal');
+        dom.paytableContent = document.getElementById('paytableContent');
+        dom.btnClosePaytable = document.getElementById('btnClosePaytable');
+        dom.bigWinOverlay = document.getElementById('bigWinOverlay');
+        dom.bigWinText = document.getElementById('bigWinText');
+        dom.bigWinAmount = document.getElementById('bigWinAmount');
+        dom.tooltip = document.getElementById('tooltip');
+        dom.paylineLeft = document.getElementById('paylineLeft');
+        dom.paylineRight = document.getElementById('paylineRight');
+        dom.cells = []; // dom.cells[reel][row] = cell element
+    }
+
+    // ==================================================================
+    // SECTION 4: UTILITY FUNCTIONS
+    // ==================================================================
+
+    function formatMoney(amount) {
+        return amount.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+    }
+
+    function getCurrentBet() {
+        return BET_LEVELS[state.betIndex];
+    }
+
+    function getBetPerLine() {
+        return getCurrentBet() / NUM_LINES;
+    }
+
+    function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function randomSymbol() {
+        var keys = Object.keys(SYMBOLS);
+        return keys[randomInt(0, keys.length - 1)];
+    }
+
+    // ==================================================================
+    // SECTION 5: UI UPDATE FUNCTIONS
+    // ==================================================================
+
+    function updateDisplay() {
+        dom.balanceValue.textContent = formatMoney(state.balance);
+        dom.betValue.textContent = formatMoney(getCurrentBet());
+        dom.betInline.textContent = formatMoney(getCurrentBet());
+        dom.winValue.textContent = formatMoney(state.lastWin);
+        if (state.lastWin > 0) {
+            dom.winValue.style.color = '#ffd700';
+        } else {
+            dom.winValue.style.color = '#e0f0ff';
+        }
+    }
+
+    function updateBetButtons() {
+        var hasFrozen = state.frozenScatters.length > 0;
+        dom.btnMinus.disabled = state.spinning || state.processing || state.betIndex <= 0 || hasFrozen;
+        dom.btnPlus.disabled = state.spinning || state.processing || state.betIndex >= BET_LEVELS.length - 1 || hasFrozen;
+    }
+
+    function updateSpinButton() {
+        dom.btnSpin.disabled = state.spinning || state.processing;
+        if (state.inFreeSpins) {
+            dom.btnSpin.textContent = 'ФРИ';
+        } else {
+            dom.btnSpin.textContent = 'КРУТИТЬ';
+        }
+    }
+
+    function showMessage(text, duration) {
+        dom.messageBar.textContent = text;
+        dom.messageBar.style.display = 'block';
+        if (duration) {
+            setTimeout(function() {
+                dom.messageBar.style.display = 'none';
+            }, duration);
+        }
+    }
+
+    function hideMessage() {
+        dom.messageBar.style.display = 'none';
+    }
+
+    // ==================================================================
+    // SECTION 6: REEL GRID RENDERING
+    // ==================================================================
+
+    // Build the 5x3 grid of cell elements
+    function buildGrid() {
+        dom.reelsGrid.innerHTML = '';
+        dom.cells = [];
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            dom.cells[reel] = [];
+        }
+        // Grid is filled column-by-column but CSS grid goes row-by-row
+        // So we build row-by-row: row0-reel0, row0-reel1, ..., row2-reel4
+        for (var row = 0; row < NUM_ROWS; row++) {
+            for (var reel = 0; reel < NUM_REELS; reel++) {
+                var cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.reel = reel;
+                cell.dataset.row = row;
+
+                var content = document.createElement('div');
+                content.className = 'symbol-content';
+                cell.appendChild(content);
+
+                // Freeze overlay (hidden by default)
+                var freezeDiv = document.createElement('div');
+                freezeDiv.className = 'freeze-overlay';
+                var counter = document.createElement('span');
+                counter.className = 'freeze-counter';
+                freezeDiv.appendChild(counter);
+                cell.appendChild(freezeDiv);
+
+                dom.reelsGrid.appendChild(cell);
+                dom.cells[reel][row] = cell;
+            }
+        }
+    }
+
+    // Render a single symbol into a cell
+    // Preserves animation classes (spinning, bounce, win-highlight)
+    function renderSymbol(reel, row, symbolId) {
+        var cell = dom.cells[reel][row];
+        var content = cell.querySelector('.symbol-content');
+        var sym = SYMBOLS[symbolId];
+
+        // Remove old sym-* classes but keep animation classes
+        var classes = cell.className.split(/\s+/);
+        for (var c = classes.length - 1; c >= 0; c--) {
+            if (classes[c].indexOf('sym-') === 0) {
+                cell.classList.remove(classes[c]);
+            }
+        }
+        if (symbolId) {
+            cell.classList.add('sym-' + symbolId);
+        }
+
+        if (!sym) {
+            content.innerHTML = '';
+            return;
+        }
+
+        var iconHtml = '';
+        if (sym.type === 'low') {
+            // Text-based card symbols
+            iconHtml = '<div class="symbol-icon">' + sym.icon + '</div>';
+        } else {
+            // Emoji-based picture symbols
+            iconHtml = '<div class="symbol-icon">' + sym.icon + '</div>';
+            iconHtml += '<div class="symbol-label">' + sym.name.toUpperCase() + '</div>';
+        }
+        content.innerHTML = iconHtml;
+    }
+
+    // Render the entire grid from state.grid
+    function renderGrid() {
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            for (var row = 0; row < NUM_ROWS; row++) {
+                renderSymbol(reel, row, state.grid[reel][row]);
+            }
+        }
+        updateFrozenOverlays();
+    }
+
+    // ==================================================================
+    // SECTION 7: PAYLINE NUMBER MARKERS
+    // ==================================================================
+
+    function buildPaylineMarkers() {
+        dom.paylineLeft.innerHTML = '';
+        dom.paylineRight.innerHTML = '';
+
+        for (var i = 0; i < NUM_LINES; i++) {
+            var marker = document.createElement('div');
+            marker.className = 'payline-num';
+            marker.textContent = (i + 1);
+            marker.style.background = LINE_COLORS[i];
+            marker.style.color = '#fff';
+            marker.dataset.line = i;
+
+            // Hover to highlight the payline
+            marker.addEventListener('mouseenter', function(e) {
+                var li = parseInt(e.target.dataset.line);
+                drawPayline(li, LINE_COLORS[li]);
+            });
+            marker.addEventListener('mouseleave', function() {
+                clearWinLines();
+            });
+
+            if (i < 10) {
+                dom.paylineLeft.appendChild(marker);
+            } else {
+                dom.paylineRight.appendChild(marker);
+            }
+        }
+    }
+
+    // ==================================================================
+    // SECTION 8: REEL RESULT GENERATION
+    // ==================================================================
+
+    // Get 3 consecutive symbols from a reel strip starting at a random position
+    function generateReelResult(reelIndex) {
+        var strip = REEL_STRIPS[reelIndex];
+        var startPos = randomInt(0, strip.length - 1);
+        var result = [];
+        for (var i = 0; i < NUM_ROWS; i++) {
+            var pos = (startPos + i) % strip.length;
+            result.push(strip[pos]);
+        }
+        return result;
+    }
+
+    // Generate full grid results.
+    // Grid stores the actual reel result. Frozen scatters are an overlay.
+    // If a frozen scatter occupies a cell, the underlying grid symbol
+    // is replaced with a non-scatter symbol to avoid visual confusion
+    // (the frozen overlay will show the scatter icon anyway).
+    function generateFullGrid() {
+        var nonScatterSymbols = ['penguin','walrus','eskimo','igloo','A','K','Q','J','10'];
+        var newGrid = [];
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            var reelResult = generateReelResult(reel);
+            newGrid[reel] = [];
+            for (var row = 0; row < NUM_ROWS; row++) {
+                if (hasFrozenAt(reel, row) && reelResult[row] === 'scatter') {
+                    // Don't place a grid scatter under a frozen scatter
+                    newGrid[reel][row] = nonScatterSymbols[randomInt(0, nonScatterSymbols.length - 1)];
+                } else {
+                    newGrid[reel][row] = reelResult[row];
+                }
+            }
+        }
+        return newGrid;
+    }
+
+    // ==================================================================
+    // SECTION 9: SPIN ANIMATION
+    // ==================================================================
+
+    var spinTimers = [];    // interval IDs for each reel cycling
+    var spinStopped = [];   // which reels have stopped
+
+    function startSpin() {
+        // Validation
+        if (state.spinning || state.processing) return;
+
+        if (!state.inFreeSpins) {
+            if (state.balance < getCurrentBet()) {
+                showMessage('Недостаточно средств!', 2000);
+                return;
+            }
+            // Deduct bet
+            state.balance -= getCurrentBet();
+        }
+
+        state.spinning = true;
+        state.lastWin = 0;
+        state.winLines = [];
+        clearWinLines();
+        hideMessage();
+        updateDisplay();
+        updateSpinButton();
+        updateBetButtons();
+
+        // Generate the final grid
+        var finalGrid = generateFullGrid();
+
+        // Start spinning animation for each reel
+        spinTimers = [];
+        spinStopped = [false, false, false, false, false];
+
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            startReelSpin(reel);
+        }
+
+        // Stop reels one by one with delay
+        for (var r = 0; r < NUM_REELS; r++) {
+            (function(reelIdx, finalResult) {
+                setTimeout(function() {
+                    stopReel(reelIdx, finalResult);
+                }, 600 + reelIdx * 300);
+            })(r, finalGrid[r]);
+        }
+
+        // After all reels stopped, process results
+        setTimeout(function() {
+            state.grid = finalGrid;
+            onAllReelsStopped();
+        }, 600 + NUM_REELS * 300 + 200);
+    }
+
+    function startReelSpin(reelIndex) {
+        // Add spinning class to non-frozen cells
+        for (var row = 0; row < NUM_ROWS; row++) {
+            if (!hasFrozenAt(reelIndex, row)) {
+                dom.cells[reelIndex][row].classList.add('spinning');
+            }
+        }
+        // Rapidly cycle random symbols in this reel
+        var timer = setInterval(function() {
+            for (var row = 0; row < NUM_ROWS; row++) {
+                if (!hasFrozenAt(reelIndex, row)) {
+                    renderSymbol(reelIndex, row, randomSymbol());
+                }
+            }
+        }, 70);
+        spinTimers[reelIndex] = timer;
+    }
+
+    function stopReel(reelIndex, finalSymbols) {
+        // Clear the cycling timer
+        clearInterval(spinTimers[reelIndex]);
+        spinStopped[reelIndex] = true;
+
+        // Set final symbols and add bounce
+        for (var row = 0; row < NUM_ROWS; row++) {
+            var cell = dom.cells[reelIndex][row];
+            cell.classList.remove('spinning');
+
+            if (!hasFrozenAt(reelIndex, row)) {
+                renderSymbol(reelIndex, row, finalSymbols[row]);
+            }
+
+            // Add bounce animation
+            cell.classList.add('bounce');
+            (function(c) {
+                setTimeout(function() { c.classList.remove('bounce'); }, 300);
+            })(cell);
+        }
+
+        // Play stop sound
+        playSound('stop');
+    }
+
+    // ==================================================================
+    // SECTION 10: POST-SPIN PROCESSING
+    // ==================================================================
+
+    function onAllReelsStopped() {
+        state.spinning = false;
+        state.processing = true;
+
+        // Step 1: Evaluate payline wins
+        var wins = evaluatePaylines();
+        state.winLines = wins;
+
+        var totalWin = 0;
+        for (var i = 0; i < wins.length; i++) {
+            totalWin += wins[i].payout;
+        }
+
+        // Step 2: Show wins
+        if (totalWin > 0) {
+            state.lastWin = totalWin;
+            state.balance += totalWin;
+            if (state.inFreeSpins) {
+                state.freeSpinsWinTotal += totalWin;
+            }
+            updateDisplay();
+            showWinAnimation(wins, totalWin, function() {
+                afterWinsShown();
+            });
+        } else {
+            state.lastWin = 0;
+            updateDisplay();
+            afterWinsShown();
+        }
+    }
+
+    function afterWinsShown() {
+        // IMPORTANT: Count scatters BEFORE gravity, so frozen scatters
+        // with timer=1 still count for bonus trigger on this spin.
+
+        // Step 3: Count all scatters on screen (frozen + new from grid)
+        var scatterInfo = countScatters();
+        var totalScatters = scatterInfo.total;
+        var newScatters = scatterInfo.newPositions; // [{reel, row}]
+
+        // Step 4: Check for free spins trigger (3+ scatters)
+        if (totalScatters >= 3) {
+            // Clear all frozen scatters (they contributed to the trigger)
+            clearAllFrozenScatters();
+            triggerFreeSpins(totalScatters);
+            return;
+        }
+
+        // Step 5: Process frozen scatter gravity AFTER scatter check
+        processGravity();
+
+        // Step 6: Offer freeze for new scatters (if not in free spins)
+        // Only offer scatters that are NOT at same position as frozen after gravity
+        if (!state.inFreeSpins && newScatters.length > 0) {
+            // Filter out new scatters that now collide with a fallen frozen scatter
+            var validOffers = [];
+            for (var i = 0; i < newScatters.length; i++) {
+                if (!hasFrozenAt(newScatters[i].reel, newScatters[i].row)) {
+                    validOffers.push(newScatters[i]);
+                }
+            }
+            var maxCanFreeze = 2 - state.frozenScatters.length;
+            if (maxCanFreeze > 0 && validOffers.length > 0) {
+                var toOffer = validOffers.slice(0, maxCanFreeze);
+                offerFreezeSequentially(toOffer, function() {
+                    finishProcessing();
+                });
+                return;
+            }
+        }
+
+        finishProcessing();
+    }
+
+    function finishProcessing() {
+        state.processing = false;
+        updateSpinButton();
+        updateBetButtons();
+        updateFrozenOverlays();
+        renderGrid();
+
+        // Free spins: auto-continue
+        if (state.inFreeSpins) {
+            if (state.freeSpinsLeft > 0) {
+                setTimeout(function() { runFreeSpin(); }, 800);
+            } else {
+                endFreeSpins();
+            }
+            return;
+        }
+
+        // Auto play
+        if (state.autoPlay && state.balance >= getCurrentBet()) {
+            setTimeout(function() { startSpin(); }, 600);
+        }
+    }
+
+    // ==================================================================
+    // SECTION 11: WIN EVALUATION
+    // ==================================================================
+
+    // Check all 20 paylines and return array of wins
+    function evaluatePaylines() {
+        var wins = [];
+        var betPerLine = getBetPerLine();
+
+        for (var i = 0; i < PAYLINES.length; i++) {
+            var result = checkPayline(i);
+            if (result !== null) {
+                result.payout = betPerLine * result.multiplier;
+                wins.push(result);
+            }
+        }
+
+        return wins;
+    }
+
+    // Check a single payline for a win
+    // Returns {lineIndex, symbol, count, multiplier, positions} or null
+    function checkPayline(lineIndex) {
+        var line = PAYLINES[lineIndex];
+        var positions = [];
+
+        // Get the effective symbol at each reel position on this line
+        var lineSymbols = [];
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            var row = line[reel];
+            var sym = getEffectiveSymbol(reel, row);
+            lineSymbols.push(sym);
+            positions.push({reel: reel, row: row});
+        }
+
+        // First symbol
+        var firstSym = lineSymbols[0];
+        if (firstSym === null || firstSym === 'scatter') {
+            return null;
+        }
+
+        // Count consecutive matching from left
+        var matchSymbol = (firstSym === 'wild') ? null : firstSym;
+        var count = 1;
+
+        for (var r = 1; r < NUM_REELS; r++) {
+            var sym = lineSymbols[r];
+            if (sym === null || sym === 'scatter') {
+                break;
+            }
+            if (sym === 'wild') {
+                count++;
+                continue;
+            }
+            if (matchSymbol === null) {
+                matchSymbol = sym;
+                count++;
+                continue;
+            }
+            if (sym === matchSymbol) {
+                count++;
+                continue;
+            }
+            break; // Mismatch
+        }
+
+        // If all wilds, use wild paytable
+        if (matchSymbol === null) {
+            matchSymbol = 'wild';
+        }
+
+        // Need at least 3 to win
+        if (count < 3) {
+            return null;
+        }
+
+        var multiplier = PAYTABLE[matchSymbol][count - 1];
+        if (!multiplier || multiplier <= 0) {
+            return null;
+        }
+
+        return {
+            lineIndex: lineIndex,
+            symbol: matchSymbol,
+            count: count,
+            multiplier: multiplier,
+            positions: positions.slice(0, count)
+        };
+    }
+
+    // Get the effective symbol at a grid position.
+    // Frozen scatter cells use the underlying grid symbol (which is never
+    // 'scatter' — see generateFullGrid). This way paylines pass through
+    // frozen cells and can form wins with whatever the grid has underneath.
+    function getEffectiveSymbol(reel, row) {
+        var sym = state.grid[reel][row];
+        // Scatters don't participate in paylines (only trigger bonus)
+        if (sym === 'scatter') {
+            return 'scatter'; // checkPayline already skips scatters
+        }
+        return sym;
+    }
+
+    // ==================================================================
+    // SECTION 12: WIN DISPLAY & ANIMATION
+    // ==================================================================
+
+    function showWinAnimation(wins, totalWin, callback) {
+        // Highlight winning cells and draw lines
+        var winIndex = 0;
+        var cycleCount = 0;
+        var maxCycles = Math.min(wins.length * 2, 6); // Max 6 cycles for snappy UX
+
+        // Check for big win (>= 10x bet)
+        if (totalWin >= getCurrentBet() * 10) {
+            showBigWin(totalWin);
+        }
+
+        playSound('win');
+
+        // Show total win message
+        showMessage('ВЫИГРЫШ: ' + formatMoney(totalWin));
+
+        function showNextWin() {
+            clearWinLines();
+            clearWinHighlights();
+
+            if (cycleCount >= maxCycles) {
+                // Show all wins briefly at end
+                for (var w = 0; w < wins.length; w++) {
+                    highlightWinCells(wins[w].positions);
+                    drawPayline(wins[w].lineIndex, LINE_COLORS[wins[w].lineIndex]);
+                }
+                setTimeout(function() {
+                    clearWinLines();
+                    clearWinHighlights();
+                    hideMessage();
+                    if (callback) callback();
+                }, 800);
+                return;
+            }
+
+            var win = wins[winIndex % wins.length];
+            highlightWinCells(win.positions);
+            drawPayline(win.lineIndex, LINE_COLORS[win.lineIndex]);
+
+            var lineNum = win.lineIndex + 1;
+            showMessage('Линия ' + lineNum + ': ' + win.count + '× ' +
+                SYMBOLS[win.symbol].name + ' — ' + formatMoney(win.payout) +
+                '   |   Всего: ' + formatMoney(totalWin));
+
+            winIndex++;
+            cycleCount++;
+            setTimeout(showNextWin, 900);
+        }
+
+        if (wins.length === 1) {
+            // Single win: show it briefly and continue
+            highlightWinCells(wins[0].positions);
+            drawPayline(wins[0].lineIndex, LINE_COLORS[wins[0].lineIndex]);
+            setTimeout(function() {
+                clearWinLines();
+                clearWinHighlights();
+                hideMessage();
+                if (callback) callback();
+            }, 1500);
+        } else {
+            showNextWin();
+        }
+    }
+
+    function highlightWinCells(positions) {
+        for (var i = 0; i < positions.length; i++) {
+            var p = positions[i];
+            dom.cells[p.reel][p.row].classList.add('win-highlight');
+        }
+    }
+
+    function clearWinHighlights() {
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            for (var row = 0; row < NUM_ROWS; row++) {
+                dom.cells[reel][row].classList.remove('win-highlight');
+            }
+        }
+    }
+
+    // Draw a payline on the SVG overlay
+    function drawPayline(lineIndex, color) {
+        var line = PAYLINES[lineIndex];
+        var svg = dom.winLinesOverlay;
+
+        // Calculate cell dimensions
+        var gridW = 820;
+        var gridH = 420;
+        var cellW = (gridW - 4 * 4) / 5; // 5 columns, 4 gaps of 4px
+        var cellH = (gridH - 2 * 4) / 3;  // 3 rows, 2 gaps of 4px
+        var gapW = 4;
+        var gapH = 4;
+
+        var points = [];
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            var row = line[reel];
+            var cx = reel * (cellW + gapW) + cellW / 2;
+            var cy = row * (cellH + gapH) + cellH / 2;
+            points.push(cx + ',' + cy);
+        }
+
+        var polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polyline.setAttribute('points', points.join(' '));
+        polyline.setAttribute('fill', 'none');
+        polyline.setAttribute('stroke', color);
+        polyline.setAttribute('stroke-width', '3');
+        polyline.setAttribute('stroke-linecap', 'round');
+        polyline.setAttribute('stroke-linejoin', 'round');
+        polyline.setAttribute('opacity', '0.75');
+        svg.appendChild(polyline);
+    }
+
+    function clearWinLines() {
+        dom.winLinesOverlay.innerHTML = '';
+    }
+
+    function showBigWin(amount) {
+        dom.bigWinAmount.textContent = formatMoney(amount);
+        dom.bigWinOverlay.classList.add('active');
+        setTimeout(function() {
+            dom.bigWinOverlay.classList.remove('active');
+        }, 2500);
+    }
+
+    // ==================================================================
+    // SECTION 13: SCATTER COUNTING
+    // ==================================================================
+
+    // Count all scatters using UNION of positions:
+    // - frozen scatter positions (from state.frozenScatters)
+    // - new scatter positions (from grid, even if at same reel/row as frozen)
+    // Each unique (reel, row) counts once. New scatters at frozen positions
+    // are NOT double-counted, but ARE counted (the frozen one covers them).
+    function countScatters() {
+        // Build a set of all scatter positions using "reel,row" as key
+        var positionSet = {};
+        var frozenPositions = {};
+        var newPositions = [];
+
+        // Add frozen scatter positions
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            var fs = state.frozenScatters[i];
+            var key = fs.reel + ',' + fs.row;
+            positionSet[key] = true;
+            frozenPositions[key] = true;
+        }
+
+        // Add new scatter positions from the grid
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            for (var row = 0; row < NUM_ROWS; row++) {
+                if (state.grid[reel][row] === 'scatter') {
+                    var key2 = reel + ',' + row;
+                    positionSet[key2] = true;
+                    // Track new (non-frozen) for freeze offers
+                    if (!frozenPositions[key2]) {
+                        newPositions.push({reel: reel, row: row});
+                    }
+                }
+            }
+        }
+
+        // Total = number of unique scatter positions
+        var total = 0;
+        for (var k in positionSet) {
+            if (positionSet.hasOwnProperty(k)) total++;
+        }
+
+        return {
+            total: total,
+            frozenCount: state.frozenScatters.length,
+            newPositions: newPositions
+        };
+    }
+
+    // ==================================================================
+    // SECTION 14: FROZEN SCATTER GRAVITY MECHANIC
+    // ==================================================================
+
+    function hasFrozenAt(reel, row) {
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            var fs = state.frozenScatters[i];
+            if (fs.reel === reel && fs.row === row) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function getFrozenAt(reel, row) {
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            if (state.frozenScatters[i].reel === reel && state.frozenScatters[i].row === row) {
+                return state.frozenScatters[i];
+            }
+        }
+        return null;
+    }
+
+    // Process gravity: move frozen scatters down, remove expired ones
+    // Frozen scatters are overlays — the grid data is NOT modified here.
+    function processGravity() {
+        if (state.frozenScatters.length === 0) return;
+
+        var toRemove = [];
+
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            var fs = state.frozenScatters[i];
+            fs.timer--;
+
+            if (fs.timer <= 0) {
+                // Ice shatters — mark for removal
+                toRemove.push(i);
+                animateIceShatter(fs.reel, fs.row);
+            } else {
+                // Move scatter down one row (overlay moves, grid data unchanged)
+                fs.row++;
+            }
+        }
+
+        // Remove expired frozen scatters (reverse order to keep indices valid)
+        for (var j = toRemove.length - 1; j >= 0; j--) {
+            state.frozenScatters.splice(toRemove[j], 1);
+        }
+
+        updateFrozenOverlays();
+    }
+
+    // Freeze a scatter at given position
+    function doFreezeScatter(reel, row) {
+        var timer = (NUM_ROWS - row); // row 0: 3, row 1: 2, row 2: 1
+
+        state.frozenScatters.push({
+            reel: reel,
+            row: row,
+            timer: timer,
+            maxTimer: timer
+        });
+
+        // Deduct freeze cost (20% of current bet)
+        var cost = getCurrentBet() * 0.20;
+        state.balance -= cost;
+        updateDisplay();
+
+        playSound('freeze');
+    }
+
+    // Update frozen scatter visual overlays
+    function updateFrozenOverlays() {
+        // First, hide all freeze overlays
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            for (var row = 0; row < NUM_ROWS; row++) {
+                var cell = dom.cells[reel][row];
+                var overlay = cell.querySelector('.freeze-overlay');
+                overlay.className = 'freeze-overlay';
+            }
+        }
+
+        // Show overlays for active frozen scatters
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            var fs = state.frozenScatters[i];
+            if (fs.row >= 0 && fs.row < NUM_ROWS) {
+                var cell = dom.cells[fs.reel][fs.row];
+                var overlay = cell.querySelector('.freeze-overlay');
+                var counter = overlay.querySelector('.freeze-counter');
+
+                overlay.classList.add('active');
+                counter.textContent = '❄️ ' + fs.timer;
+
+                // Render scatter symbol in this cell
+                renderSymbol(fs.reel, fs.row, 'scatter');
+
+                // Add crack level based on timer
+                var crackLevel = fs.maxTimer - fs.timer;
+                if (crackLevel >= 2) {
+                    overlay.classList.add('crack-2');
+                } else if (crackLevel >= 1) {
+                    overlay.classList.add('crack-1');
+                }
+            }
+        }
+    }
+
+    // Animate ice shattering
+    function animateIceShatter(reel, row) {
+        if (row >= 0 && row < NUM_ROWS) {
+            var cell = dom.cells[reel][row];
+            var overlay = cell.querySelector('.freeze-overlay');
+            overlay.classList.add('shattering');
+            playSound('break');
+            setTimeout(function() {
+                overlay.className = 'freeze-overlay';
+            }, 500);
+        }
+    }
+
+    function clearAllFrozenScatters() {
+        for (var i = 0; i < state.frozenScatters.length; i++) {
+            var fs = state.frozenScatters[i];
+            animateIceShatter(fs.reel, fs.row);
+        }
+        state.frozenScatters = [];
+        setTimeout(function() {
+            updateFrozenOverlays();
+        }, 500);
+    }
+
+    // ==================================================================
+    // SECTION 15: FREEZE OFFER FLOW
+    // ==================================================================
+
+    function offerFreezeSequentially(positions, callback) {
+        if (positions.length === 0) {
+            callback();
+            return;
+        }
+
+        var pos = positions[0];
+        var remaining = positions.slice(1);
+        var cost = getCurrentBet() * 0.20;
+
+        // Check if player can afford the freeze
+        if (state.balance < cost) {
+            // Auto-decline, not enough money
+            showMessage('Недостаточно средств для заморозки!', 1500);
+            setTimeout(function() {
+                offerFreezeSequentially(remaining, callback);
+            }, 1600);
+            return;
+        }
+
+        // Highlight the scatter cell
+        dom.cells[pos.reel][pos.row].classList.add('win-highlight');
+
+        // Show freeze modal
+        dom.freezeCost.textContent = formatMoney(cost);
+        dom.freezeModal.classList.add('active');
+
+        // Set up button handlers
+        function onYes() {
+            cleanup();
+            doFreezeScatter(pos.reel, pos.row);
+            updateFrozenOverlays();
+            updateBetButtons();
+            offerFreezeSequentially(remaining, callback);
+        }
+
+        function onNo() {
+            cleanup();
+            offerFreezeSequentially(remaining, callback);
+        }
+
+        function cleanup() {
+            dom.freezeModal.classList.remove('active');
+            dom.cells[pos.reel][pos.row].classList.remove('win-highlight');
+            dom.btnFreezeYes.removeEventListener('click', onYes);
+            dom.btnFreezeNo.removeEventListener('click', onNo);
+        }
+
+        dom.btnFreezeYes.addEventListener('click', onYes);
+        dom.btnFreezeNo.addEventListener('click', onNo);
+    }
+
+    // ==================================================================
+    // SECTION 16: FREE SPINS
+    // ==================================================================
+
+    function triggerFreeSpins(scatterCount) {
+        var spinsAwarded = 10;
+        if (state.inFreeSpins) {
+            // Retrigger
+            state.freeSpinsLeft += spinsAwarded;
+            dom.fsCount.textContent = state.freeSpinsLeft;
+            showMessage('ПОВТОР! +' + spinsAwarded + ' фриспинов!', 2000);
+            setTimeout(function() { finishProcessing(); }, 2100);
+            return;
+        }
+
+        // First trigger
+        state.inFreeSpins = true;
+        state.freeSpinsLeft = spinsAwarded;
+        state.freeSpinsWinTotal = 0;
+
+        playSound('bonus');
+
+        // Show intro modal
+        dom.fsIntroText.innerHTML = 'У вас выпало <strong>' + scatterCount + ' скаттеров!</strong><br>' +
+            'Начислено <strong>' + spinsAwarded + ' фриспинов</strong>!';
+        dom.fsIntroModal.classList.add('active');
+
+        dom.btnFsStart.onclick = function() {
+            dom.fsIntroModal.classList.remove('active');
+            dom.freeSpinsBar.style.display = 'block';
+            dom.fsCount.textContent = state.freeSpinsLeft;
+            updateSpinButton();
+            state.processing = false;
+            setTimeout(function() { runFreeSpin(); }, 500);
+        };
+    }
+
+    function runFreeSpin() {
+        if (state.freeSpinsLeft <= 0) {
+            endFreeSpins();
+            return;
+        }
+
+        state.freeSpinsLeft--;
+        dom.fsCount.textContent = state.freeSpinsLeft;
+        startSpin();
+    }
+
+    function endFreeSpins() {
+        state.inFreeSpins = false;
+        state.freeSpinsLeft = 0;
+        dom.freeSpinsBar.style.display = 'none';
+        state.processing = false;
+
+        // Show end modal
+        dom.fsTotalWin.textContent = formatMoney(state.freeSpinsWinTotal);
+        dom.fsEndModal.classList.add('active');
+
+        dom.btnFsEnd.onclick = function() {
+            dom.fsEndModal.classList.remove('active');
+            updateSpinButton();
+            updateBetButtons();
+
+            // Resume auto-play if enabled
+            if (state.autoPlay && state.balance >= getCurrentBet()) {
+                setTimeout(function() { startSpin(); }, 600);
+            }
+        };
+    }
+
+    // ==================================================================
+    // SECTION 17: BET CONTROLS
+    // ==================================================================
+
+    function changeBet(direction) {
+        if (state.spinning || state.processing) return;
+        if (state.frozenScatters.length > 0) {
+            showTooltipAtButton(dom.btnMinus, 'Нельзя менять ставку, пока скаттер заморожен');
+            return;
+        }
+
+        var newIndex = state.betIndex + direction;
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= BET_LEVELS.length) newIndex = BET_LEVELS.length - 1;
+
+        state.betIndex = newIndex;
+        updateDisplay();
+        updateBetButtons();
+    }
+
+    function showTooltipAtButton(btn, text) {
+        var rect = btn.getBoundingClientRect();
+        dom.tooltip.textContent = text;
+        dom.tooltip.style.display = 'block';
+        dom.tooltip.style.left = rect.left + 'px';
+        dom.tooltip.style.top = (rect.top - 30) + 'px';
+        setTimeout(function() {
+            dom.tooltip.style.display = 'none';
+        }, 2000);
+    }
+
+    // ==================================================================
+    // SECTION 18: AUTO PLAY
+    // ==================================================================
+
+    function toggleAutoPlay() {
+        state.autoPlay = !state.autoPlay;
+        dom.btnAuto.classList.toggle('active', state.autoPlay);
+
+        if (state.autoPlay && !state.spinning && !state.processing && !state.inFreeSpins) {
+            if (state.balance >= getCurrentBet()) {
+                startSpin();
+            } else {
+                state.autoPlay = false;
+                dom.btnAuto.classList.remove('active');
+                showMessage('Недостаточно средств для автоигры!', 2000);
+            }
+        }
+    }
+
+    // ==================================================================
+    // SECTION 19: PAYTABLE
+    // ==================================================================
+
+    function buildPaytable() {
+        var html = '';
+
+        // Special symbols
+        html += '<div class="paytable-section">СПЕЦИАЛЬНЫЕ СИМВОЛЫ</div>';
+        html += '<div class="paytable-grid">';
+        html += '<div class="paytable-item">';
+        html += '<div class="pt-icon">❄️</div>';
+        html += '<div class="pt-name">СКАТТЕР (Снежинка)</div>';
+        html += '<div class="pt-pays">3+ в любом месте = 10 фриспинов<br>Можно ЗАМОРОЗИТЬ!</div>';
+        html += '</div>';
+        html += '<div class="paytable-item">';
+        html += '<div class="pt-icon">💎</div>';
+        html += '<div class="pt-name">ВАЙЛД (Ледяной кристалл)</div>';
+        html += '<div class="pt-pays">Заменяет все кроме скаттера<br>×30 / ×100 / ×500</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // High-pay symbols
+        html += '<div class="paytable-section">ВЫСОКИЕ СИМВОЛЫ</div>';
+        html += '<div class="paytable-grid">';
+        var highSyms = ['penguin', 'walrus', 'eskimo', 'igloo'];
+        for (var h = 0; h < highSyms.length; h++) {
+            var sid = highSyms[h];
+            var s = SYMBOLS[sid];
+            var p = PAYTABLE[sid];
+            html += '<div class="paytable-item">';
+            html += '<div class="pt-icon">' + s.icon + '</div>';
+            html += '<div class="pt-name">' + s.name.toUpperCase() + '</div>';
+            html += '<div class="pt-pays">×3=' + p[2] + ' ×4=' + p[3] + ' ×5=' + p[4] + '</div>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Low-pay symbols
+        html += '<div class="paytable-section">НИЗКИЕ СИМВОЛЫ</div>';
+        html += '<div class="paytable-grid">';
+        var lowSyms = ['A', 'K', 'Q', 'J', '10'];
+        for (var l = 0; l < lowSyms.length; l++) {
+            var sid2 = lowSyms[l];
+            var s2 = SYMBOLS[sid2];
+            var p2 = PAYTABLE[sid2];
+            html += '<div class="paytable-item">';
+            html += '<div class="pt-icon" style="font-weight:900;font-style:italic;color:#88bbdd;">' + s2.icon + '</div>';
+            html += '<div class="pt-name">' + s2.name.toUpperCase() + '</div>';
+            html += '<div class="pt-pays">×3=' + p2[2] + ' ×4=' + p2[3] + ' ×5=' + p2[4] + '</div>';
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // Frozen Scatter Gravity info
+        html += '<div class="paytable-section">❄️ ЗАМОРОЗКА СКАТТЕРА</div>';
+        html += '<div class="paytable-text">';
+        html += '• При 1–2 скаттерах можно ЗАМОРОЗИТЬ за +20% от ставки.<br>';
+        html += '• Замороженный скаттер остаётся на барабанах и опускается на 1 ряд каждый спин.<br>';
+        html += '• Верхний ряд: 3 спина | Средний: 2 спина | Нижний: 1 спин.<br>';
+        html += '• Соберите 3+ скаттеров (замороженных + новых) для фриспинов!<br>';
+        html += '• Макс. 2 замороженных скаттера. Ставку нельзя менять, пока есть заморозка.';
+        html += '</div>';
+
+        // Game info
+        html += '<div class="paytable-section">ИНФОРМАЦИЯ ОБ ИГРЕ</div>';
+        html += '<div class="paytable-text">';
+        html += '• 20 фиксированных линий, выплаты слева направо.<br>';
+        html += '• Фриспины: 10 спинов. 3+ скаттера во фриспинах = повтор (+10).<br>';
+        html += '• Теоретический RTP: 96%. Волатильность: средняя.';
+        html += '</div>';
+
+        dom.paytableContent.innerHTML = html;
+    }
+
+    // ==================================================================
+    // SECTION 20: SOUND EFFECTS (Web Audio API)
+    // ==================================================================
+
+    var audioCtx = null;
+
+    function getAudioCtx() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        return audioCtx;
+    }
+
+    function playSound(type) {
+        try {
+            var ctx = getAudioCtx();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            var duration = 0.15;
+            var freq = 400;
+            var vol = 0.08;
+
+            switch (type) {
+                case 'stop':
+                    freq = 500 + Math.random() * 200;
+                    duration = 0.08;
+                    osc.type = 'sine';
+                    break;
+                case 'win':
+                    freq = 700;
+                    duration = 0.3;
+                    osc.type = 'sine';
+                    vol = 0.1;
+                    // Play a little melody
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
+                    osc.frequency.setValueAtTime(1000, ctx.currentTime + 0.2);
+                    break;
+                case 'freeze':
+                    freq = 1200;
+                    duration = 0.4;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.4);
+                    vol = 0.08;
+                    break;
+                case 'break':
+                    freq = 300;
+                    duration = 0.2;
+                    osc.type = 'sawtooth';
+                    vol = 0.06;
+                    break;
+                case 'bonus':
+                    freq = 500;
+                    duration = 0.6;
+                    osc.type = 'sine';
+                    vol = 0.1;
+                    osc.frequency.setValueAtTime(500, ctx.currentTime);
+                    osc.frequency.setValueAtTime(700, ctx.currentTime + 0.15);
+                    osc.frequency.setValueAtTime(900, ctx.currentTime + 0.3);
+                    osc.frequency.setValueAtTime(1200, ctx.currentTime + 0.45);
+                    break;
+                default:
+                    freq = 400;
+                    osc.type = 'sine';
+            }
+
+            if (type !== 'win' && type !== 'freeze' && type !== 'bonus') {
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            }
+
+            gain.gain.setValueAtTime(vol, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {
+            // Audio not available, ignore
+        }
+    }
+
+    // ==================================================================
+    // SECTION 21: SNOW PARTICLE SYSTEM
+    // ==================================================================
+
+    var snowflakes = [];
+    var MAX_SNOWFLAKES = 80;
+
+    function initSnow() {
+        dom.bgCanvas.width = window.innerWidth;
+        dom.bgCanvas.height = window.innerHeight;
+
+        for (var i = 0; i < MAX_SNOWFLAKES; i++) {
+            snowflakes.push(createSnowflake(true));
+        }
+
+        window.addEventListener('resize', function() {
+            dom.bgCanvas.width = window.innerWidth;
+            dom.bgCanvas.height = window.innerHeight;
+        });
+
+        animateSnow();
+    }
+
+    function createSnowflake(randomY) {
+        return {
+            x: Math.random() * window.innerWidth,
+            y: randomY ? Math.random() * window.innerHeight : -10,
+            radius: Math.random() * 2.5 + 0.5,
+            speed: Math.random() * 0.8 + 0.2,
+            wind: Math.random() * 0.4 - 0.2,
+            opacity: Math.random() * 0.5 + 0.2
+        };
+    }
+
+    function animateSnow() {
+        var ctx = dom.bgCtx;
+        var w = dom.bgCanvas.width;
+        var h = dom.bgCanvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        for (var i = 0; i < snowflakes.length; i++) {
+            var sf = snowflakes[i];
+
+            ctx.beginPath();
+            ctx.arc(sf.x, sf.y, sf.radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200, 230, 255, ' + sf.opacity + ')';
+            ctx.fill();
+
+            sf.y += sf.speed;
+            sf.x += sf.wind;
+
+            // Recycle snowflake if it goes off screen
+            if (sf.y > h + 10 || sf.x < -10 || sf.x > w + 10) {
+                snowflakes[i] = createSnowflake(false);
+                snowflakes[i].x = Math.random() * w;
+            }
+        }
+
+        requestAnimationFrame(animateSnow);
+    }
+
+    // ==================================================================
+    // SECTION 22: EVENT LISTENERS
+    // ==================================================================
+
+    function setupEventListeners() {
+        dom.btnSpin.addEventListener('click', function() {
+            if (state.inFreeSpins) return; // Free spins are auto
+            startSpin();
+        });
+
+        dom.btnMinus.addEventListener('click', function() {
+            changeBet(-1);
+        });
+
+        dom.btnPlus.addEventListener('click', function() {
+            changeBet(1);
+        });
+
+        dom.btnAuto.addEventListener('click', function() {
+            toggleAutoPlay();
+        });
+
+        dom.btnPaytable.addEventListener('click', function() {
+            dom.paytableModal.classList.add('active');
+        });
+
+        dom.btnClosePaytable.addEventListener('click', function() {
+            dom.paytableModal.classList.remove('active');
+        });
+
+        // Close paytable on overlay click
+        dom.paytableModal.addEventListener('click', function(e) {
+            if (e.target === dom.paytableModal) {
+                dom.paytableModal.classList.remove('active');
+            }
+        });
+
+        // Keyboard shortcut: Space = Spin
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && !state.inFreeSpins) {
+                e.preventDefault();
+                startSpin();
+            }
+        });
+    }
+
+    // ==================================================================
+    // SECTION 23: INITIALIZATION
+    // ==================================================================
+
+    function init() {
+        cacheDom();
+        buildGrid();
+        buildPaylineMarkers();
+        buildPaytable();
+        setupEventListeners();
+        initSnow();
+
+        // Initialize grid with random symbols
+        state.grid = [];
+        for (var reel = 0; reel < NUM_REELS; reel++) {
+            state.grid[reel] = generateReelResult(reel);
+        }
+        renderGrid();
+        updateDisplay();
+        updateBetButtons();
+        updateSpinButton();
+    }
+
+    // Start the game when DOM is ready
+    document.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
